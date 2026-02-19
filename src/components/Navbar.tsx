@@ -17,6 +17,7 @@ export default function Navbar() {
   const { totalQty } = useCart();
   const { user, isAuthenticated, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -30,18 +31,27 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   // Hide navbar on auth pages
   const isAuthPage = ["/signin", "/signup", "/verify"].some((p) =>
     pathname.startsWith(p)
   );
   if (isAuthPage) return null;
 
+  const initials = user
+    ? user.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "";
+
   return (
     <header className="sticky top-0 z-40 border-b border-violet-100/70 bg-white/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center gap-6 px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
-            <i className="uil uil-heart text-lg" />
+            <i className="uil uil-heart text-xl" />
           </span>
           <span className="text-lg font-semibold text-slate-900">
             HealthPulse
@@ -85,7 +95,7 @@ export default function Navbar() {
             className="relative hidden h-10 w-10 items-center justify-center rounded-full border border-violet-100 text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:flex"
             aria-label="Shopping cart"
           >
-            <i className="uil uil-shopping-cart text-lg" />
+            <i className="uil uil-shopping-cart text-xl" />
             {totalQty > 0 ? (
               <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
                 {totalQty}
@@ -93,21 +103,16 @@ export default function Navbar() {
             ) : null}
           </Link>
 
-          {/* User / Auth Button */}
+          {/* User / Auth Button — desktop */}
           {isAuthenticated && user ? (
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="hidden h-10 items-center gap-2 rounded-full border border-violet-100 px-3 text-sm text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:flex"
+                className="hidden h-10 cursor-pointer items-center gap-2 rounded-full border border-violet-100 px-3 text-sm text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:flex"
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
-                  {user.fullName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)}
+                  {initials}
                 </div>
                 <span className="max-w-[100px] truncate font-medium">
                   {user.fullName.split(" ")[0]}
@@ -131,7 +136,7 @@ export default function Navbar() {
                       logout();
                       setShowDropdown(false);
                     }}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-500 transition hover:bg-red-50"
+                    className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-left text-sm text-red-500 transition hover:bg-red-50"
                   >
                     <i className="uil uil-signout" />
                     Sign Out
@@ -144,20 +149,113 @@ export default function Navbar() {
               href="/signin"
               className="hidden h-10 items-center gap-2 rounded-full border border-violet-100 px-4 text-sm font-medium text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:flex"
             >
-              <i className="uil uil-user text-lg" />
+              <i className="uil uil-user text-xl" />
               Sign In
             </Link>
           )}
 
+          {/* Hamburger — mobile only */}
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-violet-100 text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:hidden"
-            aria-label="Open menu"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-violet-100 text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:hidden"
           >
-            <i className="uil uil-bars text-lg" />
+            <i className={`uil ${menuOpen ? "uil-times" : "uil-bars"} text-2xl`} />
           </button>
         </div>
       </div>
+
+      {/* Mobile nav panel */}
+      {menuOpen && (
+        <div className="border-t border-violet-100 bg-white px-6 pb-6 pt-4 md:hidden">
+          {/* Search */}
+          <div className="mb-4">
+            <label className="relative block">
+              <i className="uil uil-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                placeholder="Search articles, products..."
+                className="w-full rounded-full border border-violet-100 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+              />
+            </label>
+          </div>
+
+          {/* Nav links */}
+          <nav className="flex flex-col gap-1">
+            {navItems.map((item) => {
+              const isActive = item.match(pathname);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                    isActive
+                      ? "bg-violet-50 text-violet-600"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="my-4 border-t border-violet-100" />
+
+          {/* Cart */}
+          <Link
+            href="/cart"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          >
+            <i className="uil uil-shopping-cart text-xl text-violet-500" />
+            Cart
+            {totalQty > 0 && (
+              <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
+                {totalQty}
+              </span>
+            )}
+          </Link>
+
+          {/* Auth */}
+          {isAuthenticated && user ? (
+            <>
+              <div className="mt-1 flex items-center gap-3 rounded-xl px-4 py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
+                  {initials}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{user.fullName}</p>
+                  <p className="text-xs text-slate-400">{user.email}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  setMenuOpen(false);
+                }}
+                className="mt-1 flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-500 transition hover:bg-red-50"
+              >
+                <i className="uil uil-signout text-xl" />
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/signin"
+              onClick={() => setMenuOpen(false)}
+              className="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+            >
+              <i className="uil uil-user text-xl text-violet-500" />
+              Sign In
+            </Link>
+          )}
+        </div>
+      )}
     </header>
   );
 }

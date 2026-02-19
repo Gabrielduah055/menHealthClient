@@ -13,8 +13,8 @@ export default function Footer() {
   return (
     <footer className="border-t border-violet-100/70 bg-white">
       <div className="mx-auto w-full max-w-6xl px-6 py-12">
-        <div className="grid gap-10 md:grid-cols-4">
-          <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+          <div className="col-span-2 space-y-4 md:col-span-1">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white">
                 <i className="uil uil-heart text-lg" />
@@ -30,24 +30,24 @@ export default function Footer() {
             <div className="flex items-center gap-3 text-slate-500">
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-violet-100 transition hover:border-violet-300 hover:text-violet-600"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-violet-100 transition hover:border-violet-300 hover:text-violet-600"
                 aria-label="Twitter"
               >
-                <i className="uil uil-twitter" />
+                <i className="uil uil-twitter text-lg" />
               </a>
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-violet-100 transition hover:border-violet-300 hover:text-violet-600"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-violet-100 transition hover:border-violet-300 hover:text-violet-600"
                 aria-label="Instagram"
               >
-                <i className="uil uil-instagram" />
+                <i className="uil uil-instagram text-lg" />
               </a>
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-violet-100 transition hover:border-violet-300 hover:text-violet-600"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-violet-100 transition hover:border-violet-300 hover:text-violet-600"
                 aria-label="YouTube"
               >
-                <i className="uil uil-youtube" />
+                <i className="uil uil-youtube text-lg" />
               </a>
             </div>
           </div>

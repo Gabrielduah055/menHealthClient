@@ -194,25 +194,6 @@ export default async function BlogArticlePage({
 
           <aside className="space-y-6 min-w-0">
             <div className="rounded-3xl border border-violet-100 bg-white p-6 shadow-sm">
-              <p className="text-xs font-semibold uppercase text-slate-400 mb-3">About the author</p>
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-100 text-sm font-semibold text-violet-600">
-                  {authorAvatar}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{authorName}</p>
-                  <p className="text-xs text-slate-400">{authorRole}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="mt-4 w-full rounded-xl border border-violet-100 bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-600"
-              >
-                View Profile
-              </button>
-            </div>
-
-            <div className="rounded-3xl border border-violet-100 bg-white p-6 shadow-sm">
               <p className="text-xs font-semibold uppercase text-slate-400">
                 Table of Contents
               </p>
