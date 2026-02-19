@@ -2,7 +2,7 @@
 
 import type { MouseEvent } from "react";
 import { useCart } from "@/context/CartContext";
-import type { Product } from "@/data/products";
+import type { Product } from "@/types/product";
 
 type AddToCartButtonProps = {
   product: Product;

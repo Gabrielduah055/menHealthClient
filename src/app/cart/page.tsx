@@ -2,13 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AnimatedSection from "@/components/AnimatedSection";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
-const formatMoney = (value: number) => `GHS ${value.toFixed(2)}`;
+const formatMoney = (value: number | string) => `GHS ${Number(value).toFixed(2)}`;
 
 export default function CartPage() {
   const { items, subtotal, updateQty, removeItem, totalQty } = useCart();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
 
   const shipping = subtotal > 0 ? 45 : 0;
   const tax = subtotal * 0.0164;
@@ -24,7 +28,7 @@ export default function CartPage() {
           </Link>
           <i className="uil uil-angle-right text-sm" />
           <Link href="/products" className="transition hover:text-slate-600">
-            Shop
+            Products
           </Link>
           <i className="uil uil-angle-right text-sm" />
           <span className="text-slate-600">Shopping Cart</span>
@@ -32,21 +36,13 @@ export default function CartPage() {
       </AnimatedSection>
 
       <AnimatedSection className="mx-auto w-full max-w-6xl px-6 pb-16">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              Your Shopping Cart
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              {totalQty} item{totalQty === 1 ? "" : "s"} in your cart
-            </p>
-          </div>
-          <Link
-            href="/products"
-            className="text-sm font-semibold text-violet-600"
-          >
-            Continue Shopping
-          </Link>
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Your Shopping Cart
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            {totalQty} item{totalQty === 1 ? "" : "s"} in your cart
+          </p>
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_0.6fr]">
@@ -65,26 +61,38 @@ export default function CartPage() {
             ) : (
               <div className="divide-y divide-violet-100">
                 {items.map((item) => {
-                  const lineTotal = item.quantity * Number(item.product.price.replace(/[^0-9.]/g, ""));
+                  const lineTotal = item.quantity * item.product.price;
                   return (
                     <div
                       key={item.product.slug}
                       className="grid grid-cols-[1.2fr_0.5fr_0.4fr_0.4fr] items-center gap-4 py-6"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50">
-                          <Image
-                            src={item.product.image}
-                            alt={item.product.name}
-                            className="h-12 w-auto object-contain"
-                          />
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-violet-50 overflow-hidden">
+                          {item.product.images?.[0] ? (
+                            <Image
+                              src={item.product.images[0]}
+                              alt={item.product.name}
+                              width={72}
+                              height={72}
+                              className="h-16 w-auto object-contain"
+                            />
+                          ) : (
+                            <i className="uil uil-box text-xl text-violet-300" />
+                          )}
                         </div>
                         <div>
                           <p className="font-semibold text-slate-900">
                             {item.product.name}
                           </p>
-                          <p className="text-xs text-slate-500">
-                            {item.product.description}
+                          <p className="text-xs text-slate-500 line-clamp-1">
+                            {item.product.description
+                              ? item.product.description
+                                .replace(/<[^>]*>/g, "")
+                                .replace(/&nbsp;/gi, " ")
+                                .replace(/\s+/g, " ")
+                                .trim()
+                              : "Health product"}
                           </p>
                           <button
                             type="button"
@@ -126,7 +134,7 @@ export default function CartPage() {
                       </div>
 
                       <span className="text-center text-sm text-slate-600">
-                        {item.product.price}
+                        {formatMoney(item.product.price)}
                       </span>
                       <span className="text-right text-sm font-semibold text-violet-600">
                         {formatMoney(lineTotal)}
@@ -134,6 +142,18 @@ export default function CartPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {items.length > 0 && (
+              <div className="mt-6 border-t border-violet-100 pt-4">
+                <Link
+                  href="/products"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-violet-600"
+                >
+                  <i className="uil uil-arrow-left" />
+                  Continue Shopping
+                </Link>
               </div>
             )}
           </div>
@@ -190,6 +210,13 @@ export default function CartPage() {
 
             <button
               type="button"
+              onClick={() => {
+                if (!isAuthenticated) {
+                  router.push("/signin?redirect=/checkout");
+                } else {
+                  router.push("/checkout");
+                }
+              }}
               className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-violet-200 transition hover:bg-violet-500"
             >
               Proceed to Checkout

@@ -1,7 +1,14 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { Product } from "@/data/products";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { Product } from "@/types/product";
 
 export type CartItem = {
   product: Product;
@@ -22,69 +29,57 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "menshealth_cart";
 
-const parsePrice = (value: string) => {
-  const numeric = Number(value.replace(/[^0-9.]/g, ""));
-  return Number.isNaN(numeric) ? 0 : numeric;
-};
-
-const loadFromStorage = (): CartItem[] => {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as CartItem[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveToStorage = (items: CartItem[]) => {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    // ignore storage errors
-  }
-};
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => loadFromStorage());
+  const [items, setItems] = useState<CartItem[]>([]);
 
-  const setAndPersist = useCallback((updater: (current: CartItem[]) => CartItem[]) => {
+  // Load AFTER hydration
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as CartItem[];
+      if (Array.isArray(parsed)) {
+        setItems(parsed);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  // Persist whenever items change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      // ignore storage errors
+    }
+  }, [items]);
+
+  const addItem = useCallback((product: Product, quantity = 1) => {
+    if (quantity <= 0) return;
+
     setItems((current) => {
-      const nextItems = updater(current);
-      saveToStorage(nextItems);
-      return nextItems;
+      const existing = current.find(
+        (item) => item.product.slug === product.slug
+      );
+
+      if (existing) {
+        return current.map((item) =>
+          item.product.slug === product.slug
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      }
+
+      return [...current, { product, quantity }];
     });
   }, []);
 
-  const addItem = useCallback(
-    (product: Product, quantity = 1) => {
-      if (quantity <= 0) return;
-      setAndPersist((current) => {
-        const existing = current.find((item) => item.product.slug === product.slug);
-        if (existing) {
-          return current.map((item) =>
-            item.product.slug === product.slug
-              ? { ...item, quantity: item.quantity + quantity }
-              : item
-          );
-        }
-        return [...current, { product, quantity }];
-      });
-    },
-    [setAndPersist]
-  );
-
-  const removeItem = useCallback(
-    (slug: string) => {
-      setAndPersist((current) =>
-        current.filter((item) => item.product.slug !== slug)
-      );
-    },
-    [setAndPersist]
-  );
+  const removeItem = useCallback((slug: string) => {
+    setItems((current) =>
+      current.filter((item) => item.product.slug !== slug)
+    );
+  }, []);
 
   const updateQty = useCallback(
     (slug: string, quantity: number) => {
@@ -92,16 +87,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeItem(slug);
         return;
       }
-      setAndPersist((current) =>
+
+      setItems((current) =>
         current.map((item) =>
           item.product.slug === slug ? { ...item, quantity } : item
         )
       );
     },
-    [setAndPersist, removeItem]
+    [removeItem]
   );
 
-  const clearCart = useCallback(() => setAndPersist(() => []), [setAndPersist]);
+  const clearCart = useCallback(() => setItems([]), []);
 
   const totalQty = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
@@ -111,21 +107,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const subtotal = useMemo(
     () =>
       items.reduce(
-        (sum, item) => sum + parsePrice(item.product.price) * item.quantity,
+        (sum, item) => sum + item.product.price * item.quantity,
         0
       ),
     [items]
   );
 
   const value = useMemo(
-    () => ({ items, totalQty, subtotal, addItem, removeItem, updateQty, clearCart }),
+    () => ({
+      items,
+      totalQty,
+      subtotal,
+      addItem,
+      removeItem,
+      updateQty,
+      clearCart,
+    }),
     [items, totalQty, subtotal, addItem, removeItem, updateQty, clearCart]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-export const useCart = () => {
+export const useCart = (): CartContextValue => {
   const ctx = useContext(CartContext);
   if (!ctx) {
     throw new Error("useCart must be used within CartProvider");

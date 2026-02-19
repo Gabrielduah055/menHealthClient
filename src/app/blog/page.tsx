@@ -2,99 +2,102 @@ import Image from "next/image";
 import Link from "next/link";
 import AnimatedSection from "@/components/AnimatedSection";
 import blogImage from "@/assets/blogImage.png";
-import cardioImage from "@/assets/cardio.png";
-import drugsImage from "@/assets/drugs1.png";
-import foodImage from "@/assets/food.png";
-import matImage from "@/assets/mat.png";
-import vitaminsImage from "@/assets/vitamins.png";
-import dumbelImage from "@/assets/dumbel.png";
+import { getPublicBlogs } from "@/services/blogs";
+import { getCategories } from "@/services/categories";
+import type { BlogPost } from "@/types/blog";
 
-const categories = [
-  "All Posts",
-  "Heart Health",
-  "Nutrition",
-  "Wellness",
-  "Preparedness",
-  "Mental Health",
-];
+export const revalidate = 60;
 
-const featuredStory = {
-  slug: "future-of-home-health-monitoring",
-  tag: "Editors Pick",
-  date: "Nov 12, 2023",
-  readTime: "8 min read",
-  title: "The Future of Home Health Monitoring: What You Need to Know",
-  excerpt:
-    "From smart blood pressure monitors to wearable ECGs, technology is revolutionizing how we track our vitals at home.",
-  author: "Dr. Sarah Jenkins",
-  role: "Chief Medical Officer",
-  image: blogImage,
+const formatDate = (value?: string | null) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
 };
 
-const articles = [
-  {
-    slug: "understanding-blood-pressure-readings",
-    tag: "Heart Health",
-    title: "Understanding Your Blood Pressure Readings",
-    date: "Oct 24, 2023",
-    readTime: "5 min read",
-    excerpt:
-      "Learn what the numbers mean and how to maintain a healthy range through diet and lifestyle.",
-    image: cardioImage,
-  },
-  {
-    slug: "essential-first-aid-items",
-    tag: "Preparedness",
-    title: "Essential First Aid Items for Every Home",
-    date: "Oct 20, 2023",
-    readTime: "3 min read",
-    excerpt:
-      "A comprehensive checklist of what you need to keep your family safe in case of minor emergencies.",
-    image: drugsImage,
-  },
-  {
-    slug: "nutrition-myths-debunked",
-    tag: "Nutrition",
-    title: "Nutrition Myths Debunked: Fact vs Fiction",
-    date: "Oct 18, 2023",
-    readTime: "6 min read",
-    excerpt:
-      "We consult top nutritionists to separate scientific fact from popular diet fiction.",
-    image: foodImage,
-  },
-  {
-    slug: "mental-health-benefits-of-daily-exercise",
-    tag: "Wellness",
-    title: "The Mental Health Benefits of Daily Exercise",
-    date: "Oct 10, 2023",
-    readTime: "4 min read",
-    excerpt:
-      "It’s not just about the body. Discover how 30 minutes of movement can transform your mindset.",
-    image: matImage,
-  },
-  {
-    slug: "science-of-sleep-restore-your-rhythm",
-    tag: "Wellness",
-    title: "The Science of Sleep: How to Restore Your Rhythm",
-    date: "Oct 04, 2023",
-    readTime: "7 min read",
-    excerpt:
-      "Struggling with insomnia? Experts explain the steps to better sleep hygiene tonight.",
-    image: vitaminsImage,
-  },
-  {
-    slug: "childproofing-101-new-parents",
-    tag: "Preparedness",
-    title: "Childproofing 101: A Guide for New Parents",
-    date: "Sep 28, 2023",
-    readTime: "5 min read",
-    excerpt:
-      "From cabinet locks to corner guards, ensure your home is a safe environment.",
-    image: dumbelImage,
-  },
-];
+const extractText = (html?: string) =>
+  (html || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
-export default function BlogPage() {
+const getExcerpt = (post: BlogPost) => {
+  const base = post.excerpt ? extractText(post.excerpt) : extractText(post.content);
+  if (!base) return "Read the latest health insights.";
+  return base.length > 160 ? `${base.slice(0, 160).trim()}...` : base;
+};
+
+const getTagLabel = (post: BlogPost) => {
+  if (post.category && typeof post.category === "object" && "name" in post.category) {
+    return post.category.name || "Health";
+  }
+  if (post.tags?.length) return post.tags[0];
+  if (post.topics?.length) return post.topics[0].replace(/^#/, "");
+  return "Health";
+};
+
+const getReadTime = (post: BlogPost) => post.readTime || "5 min read";
+
+const getCoverImage = (post: BlogPost) => post.coverImageUrl || blogImage;
+
+const buildAvatarLabel = (name: string) => {
+  if (!name) return "AD";
+  const initials = name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  return initials || "AD";
+};
+
+const getAuthor = (post: BlogPost) => {
+  const name = post.author?.name || "Admin";
+  return {
+    name,
+    role: post.author?.role || "Administrator",
+    avatarLabel: post.author?.avatarLabel || buildAvatarLabel(name),
+  };
+};
+
+export default async function BlogPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ category?: string }>;
+}) {
+  const resolved = (await searchParams) ?? {};
+  const selectedCategory = resolved.category || "all";
+  let posts: BlogPost[] = [];
+  let categories: { name: string; slug: string }[] = [];
+  try {
+    const [blogs, apiCategories] = await Promise.all([
+      getPublicBlogs(
+        { next: { revalidate } },
+        selectedCategory !== "all" ? { category: selectedCategory } : undefined
+      ),
+      getCategories({ next: { revalidate } }),
+    ]);
+    posts = blogs;
+    categories = apiCategories.map((cat) => ({
+      name: cat.name,
+      slug: cat.slug,
+    }));
+  } catch (error) {
+    console.error("Failed to load blogs", error);
+  }
+
+  const featuredPost = posts[0];
+  const articles = posts.slice(1);
+  const categoryChips = [
+    { label: "All Posts", slug: "all" },
+    ...categories.map((cat) => ({ label: cat.name, slug: cat.slug })),
+  ];
+
   return (
     <div className="bg-[var(--background)] text-slate-900">
       <AnimatedSection className="relative overflow-hidden">
@@ -133,70 +136,92 @@ export default function BlogPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap justify-center gap-3 text-xs font-semibold text-slate-500">
-            {categories.map((category, index) => (
-              <button
-                key={category}
-                type="button"
-                className={
-                  index === 0
-                    ? "rounded-full bg-slate-900 px-4 py-2 text-white"
-                    : "rounded-full border border-violet-100 bg-white px-4 py-2 text-slate-500"
-                }
-              >
-                {category}
-              </button>
-            ))}
+            {categoryChips.map((category) => {
+              const isActive = category.slug === selectedCategory;
+              return (
+                <Link
+                  key={category.slug}
+                  href={
+                    category.slug === "all"
+                      ? "/blog"
+                      : `/blog?category=${category.slug}`
+                  }
+                  className={
+                    isActive
+                      ? "rounded-full bg-slate-900 px-4 py-2 text-white"
+                      : "rounded-full border border-violet-100 bg-white px-4 py-2 text-slate-500"
+                  }
+                >
+                  {category.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </AnimatedSection>
 
       <AnimatedSection className="mx-auto w-full max-w-6xl px-6 pb-16">
-        <div className="overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm">
-          <div className="grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
-            <div className="h-full min-h-[320px] md:min-h-[360px] lg:min-h-[420px]">
-              <Image
-                src={featuredStory.image}
-                alt={featuredStory.title}
-                className="h-full w-full object-cover"
-                priority
-              />
-            </div>
-            <div className="flex flex-col justify-between px-6 py-10 lg:px-8">
-              <div>
-                <span className="inline-flex rounded-full bg-violet-600 px-3 py-1 text-[10px] font-semibold uppercase text-white">
-                  {featuredStory.tag}
-                </span>
-                <div className="mt-4 flex items-center gap-3 text-xs text-slate-400">
-                  <span>{featuredStory.date}</span>
-                  <span>•</span>
-                  <span>{featuredStory.readTime}</span>
-                </div>
-                <h2 className="mt-3 text-2xl font-semibold text-slate-900">
-                  {featuredStory.title}
-                </h2>
-                <p className="mt-3 text-sm text-slate-500">
-                  {featuredStory.excerpt}
-                </p>
+        {featuredPost ? (
+          <div className="overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm">
+            <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr] lg:gap-0">
+              <div className="relative h-[360px] md:h-[420px] lg:h-[460px]">
+                <Image
+                  src={getCoverImage(featuredPost)}
+                  alt={featuredPost.title}
+                  fill
+                  className="object-cover"
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 60vw"
+                />
               </div>
-
-              <div className="mt-6">
+              <div className="flex flex-col justify-between px-6 py-10 lg:px-8">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {featuredStory.author}
+                  <span className="inline-flex rounded-full bg-violet-600 px-3 py-1 text-[10px] font-semibold uppercase text-white">
+                    {getTagLabel(featuredPost)}
+                  </span>
+                  <div className="mt-4 flex items-center gap-3 text-xs text-slate-400">
+                    <span>{formatDate(featuredPost.publishedAt || featuredPost.createdAt)}</span>
+                    <span>•</span>
+                    <span>{getReadTime(featuredPost)}</span>
+                  </div>
+                  <h2 className="mt-3 text-2xl font-semibold text-slate-900">
+                    {featuredPost.title}
+                  </h2>
+                  <p className="mt-3 text-sm text-slate-500 line-clamp-3">
+                    {getExcerpt(featuredPost)}
                   </p>
-                  <p className="text-xs text-slate-400">{featuredStory.role}</p>
                 </div>
-                <Link
-                  href={`/blog/${featuredStory.slug}`}
-                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-600 px-5 py-2 text-sm font-semibold text-white transition hover:border-violet-300"
-                >
-                  Read Full Article
-                  <i className="uil uil-arrow-right" />
-                </Link>
+
+                <div className="mt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-600">
+                      {getAuthor(featuredPost).avatarLabel}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {getAuthor(featuredPost).name}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {getAuthor(featuredPost).role}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/blog/${featuredPost.slug || featuredPost._id}`}
+                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-600 px-5 py-2 text-sm font-semibold text-white transition hover:border-violet-300"
+                  >
+                    Read Full Article
+                    <i className="uil uil-arrow-right" />
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="rounded-3xl border border-dashed border-violet-200 bg-white p-10 text-center text-sm text-slate-500">
+            No blog posts yet. Check back soon.
+          </div>
+        )}
       </AnimatedSection>
 
       <AnimatedSection className="mx-auto w-full max-w-6xl px-6 pb-16">
@@ -214,36 +239,51 @@ export default function BlogPage() {
           {articles.map((article) => (
             <article
               key={article.slug}
-              className="relative h-full min-h-[320px] flex flex-col overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+              className="group relative flex h-full min-h-[360px] flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
             >
               <Link
-                href={`/blog/${article.slug}`}
+                href={`/blog/${article.slug || article._id}`}
                 aria-label={`Read ${article.title}`}
                 className="absolute inset-0 z-10"
               />
-              <div className="relative h-60">
-                <span className="absolute left-4 top-4 rounded-full bg-violet-100 px-3 py-1 text-[10px] font-semibold uppercase text-violet-600">
-                  {article.tag}
+              {/* Image area */}
+              <div className="relative h-52 overflow-hidden">
+                <span className="absolute left-3 top-3 z-20 rounded-full bg-violet-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                  {getTagLabel(article)}
                 </span>
                 <Image
-                  src={article.image}
+                  src={getCoverImage(article)}
                   alt={article.title}
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover transition duration-300 group-hover:scale-105"
+                  sizes="(max-width: 1024px) 100vw, 33vw"
                 />
               </div>
-              <div className="flex h-full flex-col px-5 py-4">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <span>{article.date}</span>
-                  <span>•</span>
-                  <span>{article.readTime}</span>
-                </div>
-                <h4 className="mt-2 text-base font-semibold text-slate-900">
+              {/* Content area */}
+              <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
+                <p className="text-xs">
+                  <span className="text-violet-500">
+                    {formatDate(article.publishedAt || article.createdAt)}
+                  </span>
+                  <span className="mx-1.5 text-slate-300">•</span>
+                  <span className="text-slate-400">
+                    {getReadTime(article)}
+                  </span>
+                </p>
+                <h4 className="mt-2.5 text-base font-bold leading-snug text-slate-900">
                   {article.title}
                 </h4>
-                <p className="mt-2 text-xs text-slate-500">{article.excerpt}</p>
-                <span className="mt-auto pt-4 text-xs font-semibold text-violet-600">
-                  Read Article
-                </span>
+                <p className="mt-2 text-[13px] leading-relaxed text-slate-500 line-clamp-3">
+                  {getExcerpt(article)}
+                </p>
+                <div className="mt-auto flex items-center justify-between pt-5">
+                  <span className="text-sm font-semibold text-violet-600 transition group-hover:text-violet-500">
+                    Read Article
+                  </span>
+                  <span className="z-20 flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:text-violet-500">
+                    <i className="uil uil-bookmark text-lg" />
+                  </span>
+                </div>
               </div>
             </article>
           ))}
@@ -258,7 +298,7 @@ export default function BlogPage() {
           </button>
         </div>
         <p className="mt-3 text-center text-xs text-slate-400">
-          Showing 6 of 42 articles
+          Showing {articles.length} of {posts.length} articles
         </p>
       </AnimatedSection>
 

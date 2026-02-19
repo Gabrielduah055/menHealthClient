@@ -3,21 +3,38 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { useState, useRef, useEffect } from "react";
 
 const navItems = [
   { href: "/", label: "Home", match: (path: string) => path === "/" },
   { href: "/blog", label: "Blog", match: (path: string) => path.startsWith("/blog") },
-  { href: "/products", label: "Shop", match: (path: string) => path.startsWith("/products") },
-  {
-    href: "/categories",
-    label: "Categories",
-    match: (path: string) => path.startsWith("/categories"),
-  },
+  { href: "/products", label: "Products", match: (path: string) => path.startsWith("/products") },
 ];
 
 export default function Navbar() {
   const pathname = usePathname() || "/";
   const { totalQty } = useCart();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Hide navbar on auth pages
+  const isAuthPage = ["/signin", "/signup", "/verify"].some((p) =>
+    pathname.startsWith(p)
+  );
+  if (isAuthPage) return null;
 
   return (
     <header className="sticky top-0 z-40 border-b border-violet-100/70 bg-white/80 backdrop-blur">
@@ -75,13 +92,63 @@ export default function Navbar() {
               </span>
             ) : null}
           </Link>
-          <button
-            type="button"
-            className="hidden h-10 w-10 items-center justify-center rounded-full border border-violet-100 text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:flex"
-            aria-label="Account"
-          >
-            <i className="uil uil-user text-lg" />
-          </button>
+
+          {/* User / Auth Button */}
+          {isAuthenticated && user ? (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="hidden h-10 items-center gap-2 rounded-full border border-violet-100 px-3 text-sm text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:flex"
+              >
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
+                  {user.fullName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </div>
+                <span className="max-w-[100px] truncate font-medium">
+                  {user.fullName.split(" ")[0]}
+                </span>
+                <i className="uil uil-angle-down text-xs" />
+              </button>
+
+              {showDropdown && (
+                <div className="absolute right-0 top-12 w-48 rounded-xl border border-slate-100 bg-white py-2 shadow-lg">
+                  <div className="border-b border-slate-100 px-4 py-2">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {user.fullName}
+                    </p>
+                    <p className="truncate text-xs text-slate-500">
+                      {user.email}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setShowDropdown(false);
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-500 transition hover:bg-red-50"
+                  >
+                    <i className="uil uil-signout" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/signin"
+              className="hidden h-10 items-center gap-2 rounded-full border border-violet-100 px-4 text-sm font-medium text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:flex"
+            >
+              <i className="uil uil-user text-lg" />
+              Sign In
+            </Link>
+          )}
+
           <button
             type="button"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-violet-100 text-slate-600 transition hover:border-violet-300 hover:text-violet-600 md:hidden"
@@ -94,3 +161,4 @@ export default function Navbar() {
     </header>
   );
 }
+

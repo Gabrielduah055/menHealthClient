@@ -3,92 +3,75 @@ import Link from "next/link";
 import AnimatedSection from "@/components/AnimatedSection";
 import heroImage from "@/assets/hero.png";
 import checkImage from "@/assets/check.png";
-import blogA from "@/assets/drugs1.png";
-import blogB from "@/assets/food.png";
-import blogC from "@/assets/machine.png";
-import productA from "@/assets/machine1.png";
-import productB from "@/assets/termometer.png";
-import productC from "@/assets/cardio.png";
-import productD from "@/assets/machine.png";
-
-const blogPosts = [
-  {
-    tag: "Heart Health",
-    title: "Understanding Your Blood Pressure Readings",
-    excerpt:
-      "Learn what the numbers mean and how to maintain a healthy range.",
-    image: blogA,
-    date: "Oct 24, 2025",
-    readTime: "5 min read",
-  },
-  {
-    tag: "Preparedness",
-    title: "Essential First Aid Items for Every Home",
-    excerpt:
-      "A comprehensive checklist to help your family stay prepared.",
-    image: blogB,
-    date: "Oct 20, 2025",
-    readTime: "3 min read",
-  },
-  {
-    tag: "Wellness",
-    title: "Nutrition Myths Debunked: Fact vs Fiction",
-    excerpt:
-      "We consult top nutritionists to separate science from popular diet trends.",
-    image: blogC,
-    date: "Oct 15, 2025",
-    readTime: "6 min read",
-  },
-];
-
-const products = [
-  {
-    name: "Pro BP Monitor",
-    description: "Digital upper arm cuff",
-    price: "$49.99",
-    rating: "4.9",
-    reviews: "128",
-    image: productA,
-    badge: null,
-  },
-  {
-    name: "Smart Temp",
-    description: "Instant read thermometer",
-    price: "$19.99",
-    rating: "4.7",
-    reviews: "45",
-    image: productB,
-    badge: "Sale",
-  },
-  {
-    name: "Home Safety Kit",
-    description: "120-piece first aid set",
-    price: "$34.50",
-    rating: "4.8",
-    reviews: "89",
-    image: productC,
-    badge: null,
-  },
-  {
-    name: "Pulse Check",
-    description: "Fingertip oximeter",
-    price: "$24.99",
-    rating: "4.6",
-    reviews: "210",
-    image: productD,
-    badge: null,
-  },
-];
+import blogPlaceholder from "@/assets/blogImage.png";
+import { getPublicBlogs } from "@/services/blogs";
+import { getPublicProducts } from "@/services/products";
+import type { BlogPost } from "@/types/blog";
+import type { Product } from "@/types/product";
 
 const perks = [
   { icon: "uil-shield-check", text: "Trusted by Experts" },
-  { icon: "uil-truck", text: "Free Shipping · $50+" },
+  { icon: "uil-truck", text: "Free Shipping · GHS 500+" },
   { icon: "uil-headphones", text: "24/7 Support" },
 ];
 
-export default function Home() {
+const formatDate = (value?: string | null) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+const getTagLabel = (post: BlogPost) => {
+  if (
+    post.category &&
+    typeof post.category === "object" &&
+    "name" in post.category
+  ) {
+    return post.category.name || "Health";
+  }
+  if (post.tags?.length) return post.tags[0];
+  if (post.topics?.length) return post.topics[0].replace(/^#/, "");
+  return "Health";
+};
+
+const stripHtml = (html: string) =>
+  html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const formatPrice = (price: number) =>
+  `GHS ${price.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`;
+
+export default async function Home() {
+  let blogs: BlogPost[] = [];
+  let products: Product[] = [];
+
+  try {
+    const [blogData, productData] = await Promise.all([
+      getPublicBlogs({ next: { revalidate: 60 } }),
+      getPublicProducts(),
+    ]);
+    blogs = blogData.slice(0, 3);
+    products = productData.slice(0, 4);
+  } catch (error) {
+    console.error("Failed to load home page data", error);
+  }
+
   return (
     <div className="bg-[var(--background)] text-slate-900">
+      {/* ─── Hero ─── */}
       <AnimatedSection className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.12),transparent_60%)]" />
         <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-6 pb-16 pt-14 lg:grid-cols-[1.05fr_0.95fr]">
@@ -157,6 +140,7 @@ export default function Home() {
         </div>
       </AnimatedSection>
 
+      {/* ─── Blog Section ─── */}
       <AnimatedSection className="mx-auto w-full max-w-6xl px-6 pb-16">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -176,42 +160,68 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {blogPosts.map((post) => (
-            <article
-              key={post.title}
-              className="flex h-full flex-col overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-            >
-              <div className="relative h-44">
-                <span className="absolute left-4 top-4 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase text-violet-600">
-                  {post.tag}
-                </span>
-                <Image
-                  src={post.image}
-                  alt={post.title}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="flex h-full flex-col p-5">
-                <p className="text-xs text-slate-400">
-                  {post.date} · {post.readTime}
-                </p>
-                <h3 className="mt-3 text-lg font-semibold text-slate-900">
-                  {post.title}
-                </h3>
-                <p className="mt-2 text-sm text-slate-500">{post.excerpt}</p>
+        {blogs.length > 0 ? (
+          <div className="mt-8 grid gap-6 md:grid-cols-3">
+            {blogs.map((post) => (
+              <article
+                key={post._id}
+                className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+              >
                 <Link
-                  href="/blog"
-                  className="mt-auto pt-4 text-sm font-semibold text-violet-600"
-                >
-                  Read Article
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
+                  href={`/blog/${post.slug}`}
+                  aria-label={`Read ${post.title}`}
+                  className="absolute inset-0 z-10"
+                />
+                {/* Image area */}
+                <div className="relative h-52 overflow-hidden">
+                  <span className="absolute left-3 top-3 z-20 rounded-full bg-violet-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                    {getTagLabel(post)}
+                  </span>
+                  <Image
+                    src={post.coverImageUrl || blogPlaceholder}
+                    alt={post.title}
+                    fill
+                    className="object-cover transition duration-300 group-hover:scale-105"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                  />
+                </div>
+                {/* Content area */}
+                <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
+                  <p className="text-xs">
+                    <span className="text-violet-500">
+                      {formatDate(post.publishedAt || post.createdAt)}
+                    </span>
+                    <span className="mx-1.5 text-slate-300">•</span>
+                    <span className="text-slate-400">
+                      {post.readTime || "5 min read"}
+                    </span>
+                  </p>
+                  <h3 className="mt-2.5 text-base font-bold leading-snug text-slate-900">
+                    {post.title}
+                  </h3>
+                  <p className="mt-2 text-[13px] leading-relaxed text-slate-500 line-clamp-3">
+                    {stripHtml(post.excerpt || "Read the latest health insights.")}
+                  </p>
+                  <div className="mt-auto flex items-center justify-between pt-5">
+                    <span className="text-sm font-semibold text-violet-600 transition group-hover:text-violet-500">
+                      Read Article
+                    </span>
+                    <span className="z-20 flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:text-violet-500">
+                      <i className="uil uil-bookmark text-lg" />
+                    </span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-8 rounded-3xl border border-dashed border-violet-200 bg-white p-10 text-center text-sm text-slate-500">
+            No blog posts available right now. Check back soon!
+          </div>
+        )}
       </AnimatedSection>
 
+      {/* ─── Products Section ─── */}
       <AnimatedSection className="mx-auto w-full max-w-6xl px-6 pb-20">
         <div className="text-center">
           <h2 className="text-2xl font-semibold text-slate-900">
@@ -223,59 +233,74 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {products.map((product) => (
-            <article
-              key={product.name}
-              className="relative flex h-full flex-col rounded-3xl border border-violet-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-            >
-              {product.badge ? (
-                <span className="absolute left-5 top-5 rounded-full bg-rose-500 px-2 py-1 text-[10px] font-semibold uppercase text-white">
-                  {product.badge}
-                </span>
-              ) : null}
-              <button
-                type="button"
-                aria-label="Save product"
-                className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full border border-violet-100 text-slate-400 transition hover:text-violet-600"
+        {products.length > 0 ? (
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {products.map((product) => (
+              <article
+                key={product._id}
+                className="relative flex h-full flex-col rounded-3xl border border-violet-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
               >
-                <i className="uil uil-heart" />
-              </button>
-              <div className="flex h-40 items-center justify-center rounded-2xl bg-violet-50">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  className="h-28 w-auto object-contain"
+                <Link
+                  href={`/products/${product.slug}`}
+                  aria-label={`View ${product.name}`}
+                  className="absolute inset-0 z-10 rounded-3xl"
                 />
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-xs text-amber-400">
-                <i className="uil uil-star" />
-                <span className="font-semibold text-slate-700">
-                  {product.rating}
-                </span>
-                <span className="text-slate-400">({product.reviews})</span>
-              </div>
-              <h3 className="mt-3 text-base font-semibold text-slate-900">
-                {product.name}
-              </h3>
-              <p className="mt-1 text-xs text-slate-500">
-                {product.description}
-              </p>
-              <div className="mt-auto flex items-center justify-between pt-4">
-                <span className="text-sm font-semibold text-violet-600">
-                  {product.price}
-                </span>
                 <button
                   type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm transition hover:bg-violet-500"
-                  aria-label="Add to cart"
+                  aria-label="Save product"
+                  className="absolute right-5 top-5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-violet-100 text-slate-400 transition hover:text-violet-600"
                 >
-                  <i className="uil uil-shopping-bag" />
+                  <i className="uil uil-heart" />
                 </button>
-              </div>
-            </article>
-          ))}
-        </div>
+                <div className="flex h-40 items-center justify-center rounded-2xl bg-violet-50">
+                  {product.images?.[0] ? (
+                    <Image
+                      src={product.images[0]}
+                      alt={product.name}
+                      width={200}
+                      height={200}
+                      className="h-28 w-auto object-contain"
+                    />
+                  ) : (
+                    <i className="uil uil-box text-3xl text-violet-300" />
+                  )}
+                </div>
+                <div className="mt-4 flex items-center gap-2 text-xs">
+                  <span
+                    className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase ${product.stockQty <= 5
+                      ? "bg-orange-100 text-orange-600"
+                      : "bg-emerald-100 text-emerald-600"
+                      }`}
+                  >
+                    {product.stockQty <= 0
+                      ? "Out of Stock"
+                      : product.stockQty <= 5
+                        ? "Low Stock"
+                        : "In Stock"}
+                  </span>
+                </div>
+                <h3 className="mt-3 text-base font-semibold text-slate-900">
+                  {product.name}
+                </h3>
+                <p className="mt-1 text-xs text-slate-500 line-clamp-2">
+                  {product.description}
+                </p>
+                <div className="mt-auto flex items-center justify-between pt-4">
+                  <span className="text-sm font-semibold text-violet-600">
+                    {formatPrice(product.price)}
+                  </span>
+                  <span className="z-20 flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm transition hover:bg-violet-500">
+                    <i className="uil uil-shopping-bag" />
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-10 rounded-3xl border border-dashed border-violet-200 bg-white p-10 text-center text-sm text-slate-500">
+            Products are loading or temporarily unavailable.
+          </div>
+        )}
 
         <div className="mt-10 flex justify-center">
           <Link
@@ -287,6 +312,7 @@ export default function Home() {
         </div>
       </AnimatedSection>
 
+      {/* ─── Newsletter ─── */}
       <AnimatedSection className="mx-auto w-full max-w-6xl px-6 pb-20">
         <div className="rounded-3xl bg-gradient-to-r from-violet-100 via-violet-200 to-violet-100 px-6 py-10 md:px-10">
           <div className="grid gap-6 md:grid-cols-[1.3fr_1fr] md:items-center">
