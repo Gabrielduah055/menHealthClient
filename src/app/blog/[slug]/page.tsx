@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AnimatedSection from "@/components/AnimatedSection";
+import CommentSection from "@/components/CommentSection";
+import ShareButtons from "@/components/ShareButtons";
 import blogImage from "@/assets/blogImage.png";
 import { getPublicBlogBySlug, getPublicBlogs } from "@/services/blogs";
 import type { BlogPost } from "@/types/blog";
@@ -185,60 +187,9 @@ export default async function BlogArticlePage({
               </div>
             )}
 
-            <div className="rounded-3xl border border-violet-100 bg-violet-50 px-6 py-6 text-center text-sm text-slate-600">
-              <p className="font-semibold text-slate-900">Share this article</p>
-              <p className="mt-2 text-xs text-slate-500">
-                Found this helpful? Share it with your friends and community.
-              </p>
-              <div className="mt-4 flex justify-center gap-3">
-                {["facebook", "twitter", "linkedin", "whatsapp"].map((icon) => (
-                  <button
-                    key={icon}
-                    type="button"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-violet-100 bg-white text-slate-500"
-                  >
-                    <i className={`uil uil-${icon}`} />
-                  </button>
-                ))}
-              </div>
-            </div>
+            <ShareButtons slug={post.slug} title={post.title} />
 
-            <div className="rounded-3xl border border-violet-100 bg-white px-6 py-6">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-slate-900">Discussion (2)</p>
-                <button
-                  type="button"
-                  className="text-xs text-slate-400"
-                >
-                  Sort by: Top Comments
-                </button>
-              </div>
-              <div className="mt-4 space-y-3">
-                <textarea
-                  rows={4}
-                  placeholder="Share your thoughts or ask a question..."
-                  className="w-full rounded-2xl border border-violet-100 px-4 py-3 text-sm text-slate-600"
-                />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    className="rounded-2xl border border-violet-100 px-4 py-2 text-sm text-slate-600"
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email (private)"
-                    className="rounded-2xl border border-violet-100 px-4 py-2 text-sm text-slate-600"
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="rounded-full bg-violet-600 px-5 py-2 text-sm font-semibold text-white"
-                >
-                  Post Comment
-                </button>
-              </div>
-            </div>
+            <CommentSection postId={post._id} />
           </article>
 
           <aside className="space-y-6 min-w-0">
