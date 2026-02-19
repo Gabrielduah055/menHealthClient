@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useRef, KeyboardEvent, useEffect } from "react";
+import React, { Suspense, useState, useRef, KeyboardEvent, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, authTokenKey } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import type { AuthUser } from "@/context/AuthContext";
 
-export default function VerifyPage() {
+function VerifyContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { setUser } = useAuth();
@@ -247,5 +247,13 @@ export default function VerifyPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function VerifyPage() {
+    return (
+        <Suspense fallback={<div className="flex min-h-screen items-center justify-center" />}>
+            <VerifyContent />
+        </Suspense>
     );
 }
