@@ -8,7 +8,7 @@ import React, {
     useMemo,
     useState,
 } from "react";
-import { api, authTokenKey } from "@/lib/api";
+import { api, authTokenKey, isSharedGuestMode, setSharedGuestMode } from "@/lib/api";
 
 export type AuthUser = {
     _id: string;
@@ -48,10 +48,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Load user on mount if token exists in current session
     useEffect(() => {
         const loadUser = async () => {
-            const token =
-                typeof window !== "undefined"
-                    ? sessionStorage.getItem(authTokenKey)
-                    : null;
+            if (typeof window === "undefined") {
+                setIsLoading(false);
+                return;
+            }
+
+            const isSharedLinkVisit =
+                new URLSearchParams(window.location.search).get("shared") === "1";
+            if (isSharedLinkVisit) {
+                setSharedGuestMode(true);
+            }
+
+            if (isSharedLinkVisit || isSharedGuestMode()) {
+                setUser(null);
+                setIsLoading(false);
+                return;
+            }
+
+            let token: string | null = null;
+            try {
+                token = sessionStorage.getItem(authTokenKey);
+            } catch {
+                token = null;
+            }
             if (!token) {
                 setIsLoading(false);
                 return;
@@ -89,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             if (response.token) {
+                setSharedGuestMode(false);
                 sessionStorage.setItem(authTokenKey, response.token);
                 setUser(response.user || null);
             }

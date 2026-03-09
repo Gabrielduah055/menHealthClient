@@ -5,9 +5,20 @@ const API_BASE_URL = (
 ).replace(/\/$/, "");
 
 const AUTH_TOKEN_KEY = "mensHealthToken";
+const SHARED_GUEST_MODE_KEY = "mensHealthSharedGuestMode";
+
+const isSharedGuestModeActive = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    return sessionStorage.getItem(SHARED_GUEST_MODE_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
 
 const getAuthToken = () => {
   if (typeof window === "undefined") return null;
+  if (isSharedGuestModeActive()) return null;
   try {
     return sessionStorage.getItem(AUTH_TOKEN_KEY);
   } catch {
@@ -85,3 +96,16 @@ export const api = {
 
 export const apiBaseUrl = API_BASE_URL;
 export const authTokenKey = AUTH_TOKEN_KEY;
+export const isSharedGuestMode = isSharedGuestModeActive;
+export const setSharedGuestMode = (enabled: boolean) => {
+  if (typeof window === "undefined") return;
+  try {
+    if (enabled) {
+      sessionStorage.setItem(SHARED_GUEST_MODE_KEY, "1");
+      return;
+    }
+    sessionStorage.removeItem(SHARED_GUEST_MODE_KEY);
+  } catch {
+    // no-op
+  }
+};
