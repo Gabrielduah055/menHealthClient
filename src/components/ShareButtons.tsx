@@ -5,13 +5,14 @@ import { useState } from "react";
 type Props = {
   slug: string;
   title: string;
+  description?: string;
 };
 
 type ShareTarget = {
   key: string;
   label: string;
   icon: string;
-  getUrl: (shareUrl: string, title: string) => string | null;
+  getUrl: (shareUrl: string, title: string, description?: string) => string | null;
 };
 
 const SHARE_TARGETS: ShareTarget[] = [
@@ -40,15 +41,15 @@ const SHARE_TARGETS: ShareTarget[] = [
     key: "whatsapp",
     label: "Share on WhatsApp",
     icon: "uil-whatsapp",
-    getUrl: (url, title) =>
-      `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`,
+    getUrl: (url, title, description) =>
+      `https://wa.me/?text=${encodeURIComponent(`${title}\n\n${description ? description + "\n\n" : ""}🔗 ${url}`)}`,
   },
   {
     key: "email",
     label: "Share via Email",
     icon: "uil-envelope",
-    getUrl: (url, title) =>
-      `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`I thought you might find this interesting:\n\n${url}`)}`,
+    getUrl: (url, title, description) =>
+      `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`Hey! I thought you'd enjoy this article:\n\n"${title}"\n\n${description ? description + "\n\n" : ""}Read it here:\n${url}`)}`,
   },
   {
     key: "copy",
@@ -58,7 +59,7 @@ const SHARE_TARGETS: ShareTarget[] = [
   },
 ];
 
-export default function ShareButtons({ slug, title }: Props) {
+export default function ShareButtons({ slug, title, description }: Props) {
   const [copied, setCopied] = useState(false);
 
   const getShareUrl = () => {
@@ -100,7 +101,7 @@ export default function ShareButtons({ slug, title }: Props) {
         typeof (navigator as any).share === "function"
       ) {
         try {
-          await (navigator as any).share({ title, url: shareUrl });
+          await (navigator as any).share({ title, text: description || title, url: shareUrl });
           return;
         } catch {
           // fall through to platform-specific URL
@@ -108,7 +109,7 @@ export default function ShareButtons({ slug, title }: Props) {
       }
     }
 
-    const url = target.getUrl(shareUrl, title);
+    const url = target.getUrl(shareUrl, title, description);
     if (url) {
       window.open(url, "_blank", "noopener,noreferrer,width=600,height=500");
     }
@@ -128,11 +129,10 @@ export default function ShareButtons({ slug, title }: Props) {
             onClick={() => handleShare(target)}
             title={target.label}
             aria-label={target.label}
-            className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
-              target.key === "copy" && copied
-                ? "border-green-300 bg-green-50 text-green-600"
-                : "border-violet-100 bg-white text-slate-500 hover:border-violet-300 hover:text-violet-600"
-            }`}
+            className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${target.key === "copy" && copied
+              ? "border-green-300 bg-green-50 text-green-600"
+              : "border-violet-100 bg-white text-slate-500 hover:border-violet-300 hover:text-violet-600"
+              }`}
           >
             {target.key === "copy" && copied ? (
               <i className="uil uil-check text-sm" />
