@@ -2,7 +2,7 @@
 
 import React, { Suspense, useState, useRef, KeyboardEvent, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, authTokenKey } from "@/lib/api";
+import { api, authTokenKey, setSharedGuestMode } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import type { AuthUser } from "@/context/AuthContext";
 
@@ -72,6 +72,7 @@ function VerifyContent() {
                 message: string;
             }>("/api/auth/verify-email", { email, code: fullCode });
 
+            setSharedGuestMode(false);
             sessionStorage.setItem(authTokenKey, response.token);
             setUser(response.user);
             router.push("/");

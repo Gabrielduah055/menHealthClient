@@ -66,20 +66,29 @@ export default function ShareButtons({ slug, title, description }: Props) {
     const base =
       process.env.NEXT_PUBLIC_FRONTEND_URL ||
       (typeof window !== "undefined" ? window.location.origin : "");
-    return `${base}/blog/${slug}`;
+    return `${base}/blog/${slug}?shared=1`;
+  };
+
+  const getCopyShareMessage = (shareUrl: string) => {
+    const cleanDescription = description?.trim();
+    return `${title}\n\n${cleanDescription ? `${cleanDescription}\n\n` : ""}${shareUrl}`;
   };
 
   const handleShare = async (target: ShareTarget) => {
     const shareUrl = getShareUrl();
 
     if (target.key === "copy") {
+      const shareMessage = getCopyShareMessage(shareUrl);
       try {
-        await navigator.clipboard.writeText(shareUrl);
+        await navigator.clipboard.writeText(shareMessage);
         setCopied(true);
         setTimeout(() => setCopied(false), 2500);
       } catch {
-        const el = document.createElement("input");
-        el.value = shareUrl;
+        const el = document.createElement("textarea");
+        el.value = shareMessage;
+        el.setAttribute("readonly", "");
+        el.style.position = "absolute";
+        el.style.left = "-9999px";
         document.body.appendChild(el);
         el.select();
         document.execCommand("copy");
