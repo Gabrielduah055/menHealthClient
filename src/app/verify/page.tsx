@@ -72,7 +72,7 @@ function VerifyContent() {
                 message: string;
             }>("/api/auth/verify-email", { email, code: fullCode });
 
-            localStorage.setItem(authTokenKey, response.token);
+            sessionStorage.setItem(authTokenKey, response.token);
             setUser(response.user);
             router.push("/");
         } catch (err: unknown) {

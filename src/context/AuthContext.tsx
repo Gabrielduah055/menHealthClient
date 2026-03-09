@@ -45,12 +45,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Load user on mount if token exists
+    // Load user on mount if token exists in current session
     useEffect(() => {
         const loadUser = async () => {
             const token =
                 typeof window !== "undefined"
-                    ? localStorage.getItem(authTokenKey)
+                    ? sessionStorage.getItem(authTokenKey)
                     : null;
             if (!token) {
                 setIsLoading(false);
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const userData = await api.get<AuthUser>("/api/auth/me");
                 setUser(userData);
             } catch {
-                localStorage.removeItem(authTokenKey);
+                sessionStorage.removeItem(authTokenKey);
             } finally {
                 setIsLoading(false);
             }
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             if (response.token) {
-                localStorage.setItem(authTokenKey, response.token);
+                sessionStorage.setItem(authTokenKey, response.token);
                 setUser(response.user || null);
             }
 
@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     const logout = useCallback(() => {
-        localStorage.removeItem(authTokenKey);
+        sessionStorage.removeItem(authTokenKey);
         setUser(null);
     }, []);
 

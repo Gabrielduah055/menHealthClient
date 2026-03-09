@@ -187,7 +187,16 @@ export default async function BlogArticlePage({
               </div>
             )}
 
-            <ShareButtons slug={post.slug} title={post.title} />
+            <ShareButtons
+              slug={post.slug}
+              title={post.title}
+              description={
+                (post.excerpt
+                  ? post.excerpt.replace(/<[^>]*>/g, "").trim()
+                  : ""
+                ) || "Check out this insightful men's health article — it's a must-read! 💪"
+              }
+            />
 
             <CommentSection postId={post._id} />
           </article>
